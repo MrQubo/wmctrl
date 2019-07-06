@@ -1,0 +1,89 @@
+Author: Jakub Nowak <jakub.jakub.nowak@gmail.com>
+
+--- wmctrl-1.07.orig/main.c
++++ wmctrl-1.07/main.c
+@@ -87,6 +87,7 @@ Free Software Foundation, Inc., 675 Mass
+ "                       interpret <WIN> as the WM_CLASS name.\n" \
+ "  -M                   Include client machine name in the window list.\n" \
+ "  -W                   Include title in the window list.\n" \
++"  -A                   Include KDE's activities UUID list in the windows list.\n" \
+ "  -u                   Override auto-detection and force UTF-8 mode.\n" \
+ "  -F                   Modifies the behavior of the window title matching\n" \
+ "                       algorithm. It will match only the full window title\n" \
+@@ -231,6 +232,7 @@ static struct {
+     int force_utf8;
+     int show_title;
+     int show_client_machine;
++    int show_activities;
+     int show_class;
+     int show_pid;
+     int show_geometry;
+@@ -271,7 +273,7 @@ int main (int argc, char **argv) { /* {{
+         }
+     }
+    
+-    while ((opt = getopt(argc, argv, "FGVvhlupidmxMWS:a:r:s:c:t:w:k:o:n:g:e:b:N:I:T:R:")) != -1) {
++    while ((opt = getopt(argc, argv, "FGVvhlupidmxMWAS:a:r:s:c:t:w:k:o:n:g:e:b:N:I:T:R:")) != -1) {
+         missing_option = 0;
+         switch (opt) {
+             case 'W':
+@@ -280,6 +282,9 @@ int main (int argc, char **argv) { /* {{
+             case 'M':
+                 options.show_client_machine = 1;
+                 break;
++            case 'A':
++                options.show_activities = 1;
++                break;
+             case 'S':
+                 if (strlen(optarg) > 1) {
+                     fprintf(stderr, "Separator must be a single character.");
+@@ -1312,6 +1317,7 @@ static int list_windows (Display *disp)
+         gchar *title_utf8 = get_window_title(disp, client_list[i]); /* UTF8 */
+         gchar *title_out = get_output_str(title_utf8, TRUE);
+         gchar *client_machine;
++        gchar *activities;
+         gchar *class_out = get_window_class(disp, client_list[i]); /* UTF8 */
+         unsigned long *pid;
+         unsigned long *desktop;
+@@ -1329,6 +1335,10 @@ static int list_windows (Display *disp)
+         /* client machine */
+         client_machine = get_property(disp, client_list[i],
+                 XA_STRING, "WM_CLIENT_MACHINE", NULL);
++
++        /* activities */
++        activities = get_property(disp, client_list[i],
++                XA_STRING, "_KDE_NET_WM_ACTIVITIES", NULL);
+        
+         /* pid */
+         pid = (unsigned long *)get_property(disp, client_list[i],
+@@ -1353,6 +1363,9 @@ static int list_windows (Display *disp)
+ 		if (options.show_class) {
+ 		   printf("%c%s", options.separator, class_out ? class_out : "N/A");
+ 		}
++        if (options.show_activities) {
++           printf("%c%s", options.separator, activities ? activities : "N/A");
++        }
+         if (options.show_client_machine) {
+            printf("%c%s", options.separator, client_machine ? client_machine : "N/A");
+         }
+@@ -1367,6 +1380,7 @@ static int list_windows (Display *disp)
+         g_free(title_utf8);
+         g_free(title_out);
+         g_free(desktop);
++        g_free(activities);
+         g_free(client_machine);
+         g_free(class_out);
+         g_free(pid);
+--- wmctrl-1.07.orig/wmctrl.1
++++ wmctrl-1.07/wmctrl.1
+@@ -259,6 +259,10 @@ Include client machine name in the windo
+ Include window title in the window list.
+ 
+ .TP
++.B \-A
++Include KDE's activities UUID list in the windows list.
++
++.TP
+ .BI \-S " <SEP>"
+ Change separator to <SEP> instead of tab character.
+ 
